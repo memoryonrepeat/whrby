@@ -45,17 +45,21 @@ const distance = (city1, city2) => {
 }
 
 const getOptimalMeetingPoint = () => {
+  let minTotalDistance = Number.MAX_VALUE
+  let optimalHost
   for (const host of locations) {
     table[host].distance = 0
     for (const guest of locations) {
       if (guest !== host) {
-        const d = distance(table[host], table[guest])
-        console.log(d, host, guest)
         table[host].distance += distance(table[host], table[guest])
       }
     }
+    if (table[host].distance < minTotalDistance) {
+      minTotalDistance = table[host].distance
+      optimalHost = host
+    }
   }
-  console.log(table)
+  console.log(`Optimal meeting point: ${optimalHost} `, table)
 }
 
 console.log(lines.length, table)
