@@ -1,0 +1,22 @@
+{
+  "name": "whereby",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/memoryonrepeat/whereby.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/memoryonrepeat/whereby/issues"
+  },
+  "homepage": "https://github.com/memoryonrepeat/whereby#readme",
+  "dependencies": {
+    "cities-with-1000": "^1.0.4"
+  }
+}
