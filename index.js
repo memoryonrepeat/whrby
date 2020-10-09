@@ -1,6 +1,7 @@
 const {Worker, isMainThread, parentPort, workerData} = require('worker_threads')
 
-// Haversine distance https://rosettacode.org/wiki/Haversine_formula#ES6
+// Calculate distance using Haversine formula https://en.wikipedia.org/wiki/Haversine_formula
+// I'm borrowing the implementation from https://rosettacode.org/wiki/Haversine_formula#ES6
 const distance = (city1, city2, coordinates) => {
   // Math lib function names
   const [pi, asin, sin, cos, sqrt, pow, round] = [
@@ -20,17 +21,6 @@ const distance = (city1, city2, coordinates) => {
   const dLon = rlon2 - rlon1
   const radius = 6372.8 // km
 
-  // km
-  console.log(city1, city2, round(
-    radius * 2 * asin(
-      sqrt(
-        pow(sin(dLat / 2), 2) +
-        pow(sin(dLon / 2), 2) *
-        cos(rlat1) * cos(rlat2)
-      )
-    ) * 100
-  ) / 100)
-
   return round(
     radius * 2 * asin(
       sqrt(
@@ -42,12 +32,17 @@ const distance = (city1, city2, coordinates) => {
   ) / 100
 }
 
+// Get total distance from a city to the rest of the input
 const getTotalDistanceFrom = (host, coordinates) => Object.keys(coordinates).reduce(
   (acc, curr) => (curr !== host ? acc + distance(host, curr, coordinates) : acc), 0
 )
 
 const coordinates = {}
 
+// This task can easily be solved using a single thread with naive brute force in O(N^2) time complexity
+// With small input that's not a problem, but it will be slow for big input
+// And since we already mentioned threads in the first task, I think using threads again here is a good way
+// to reduce time complexity.
 if (isMainThread) {
   if (process.argv.length > 12) {
     throw new Error('Max 10 cities are allowed')
@@ -57,8 +52,12 @@ if (isMainThread) {
     throw new Error('At least 1 city is needed')
   }
 
+  // Decide the number of threads to use at the beginning
   const totalThreads = 5
   const threads = new Set()
+
+  // Use a load balancer array to distribute the tasks evenly
+  // This is an array of city arrays, each sub-array is fed to worker as input
   const loadBalancer = Array.from(Array(totalThreads), () => [])
 
   const locations = process.argv.slice(2).map((arg) => arg.toLowerCase())
@@ -111,15 +110,21 @@ if (isMainThread) {
       threads.delete(worker)
       if (threads.size === 0) {
         console.log(`Optimal meeting point: ${globalOptima}`)
-        console.log(`Total distance (in km): ${minDistance}`)
-        console.log(`Total travel time (velocity 60km/h): ${minDistance / 60}`)
-        // https://ecoscore.be/en/info/ecoscore/co2
-        console.log(`Total carbon emission in kg: ${minDistance / 100 * 0.12}`)
+        console.log(`Total distance (in km): ${minDistance.toFixed(3)}`)
+        console.log(`Total travel time (velocity 60km/h): ${(minDistance / 60).toFixed(3)}`)
+
+        // Formula from https://ecoscore.be/en/info/ecoscore/co2
+        console.log(`Total carbon emission in kg: ${(minDistance / 100 * 0.12).toFixed(3)}`)
       }
     })
   }
 } else {
+  // Worker takes in a list of cities and outputs the one from them that
+  // has smallest total distance.
+  // In other words, the worker outputs the local optima so that the main thread
+  // can compare and output the global optima.
   let minDistance = Number.MAX_VALUE
+
   const localOptima = workerData.cities.reduce((acc, curr) => {
     const currentDistance = getTotalDistanceFrom(curr, workerData.coordinates)
     if (currentDistance < minDistance) {
@@ -130,5 +135,6 @@ if (isMainThread) {
       return acc
     }
   }, {distance: minDistance})
+
   parentPort.postMessage(localOptima)
 }
